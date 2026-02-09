@@ -368,6 +368,13 @@
             <p>快速查询 · 实时更新 · 多人协同</p>
         </header>
 
+        <!-- 微信访问提示 -->
+        <div class="wechat-tip" style="background: #fff3cd; color: #856404; padding: 15px; margin-bottom: 20px; border-radius: 5px; display: none;">
+            <strong>微信访问提示：</strong> 为了更好的体验，建议您在浏览器（如 Chrome、Safari）中打开此页面。
+            <br>
+            <small>如果显示安全警告，请点击"继续访问"</small>
+        </div>
+
         <!-- 导航 -->
         <nav>
             <button id="btn-search" class="active">查询库存</button>
@@ -1216,10 +1223,24 @@
             }
         }
 
+        // 检测微信浏览器
+        function isWeChatBrowser() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            return userAgent.includes('micromessenger');
+        }
+
         // 初始化应用
         let app;
         document.addEventListener('DOMContentLoaded', () => {
             app = new InventoryApp();
+
+            // 检测并显示微信访问提示
+            if (isWeChatBrowser()) {
+                const tip = document.querySelector('.wechat-tip');
+                if (tip) {
+                    tip.style.display = 'block';
+                }
+            }
         });
 
         // 点击弹窗外部关闭弹窗
