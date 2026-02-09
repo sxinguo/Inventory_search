@@ -428,6 +428,15 @@
                 <button id="btn-save" class="btn btn-primary">保存库存</button>
             </div>
 
+            <!-- 数据同步 -->
+            <div class="upload-section">
+                <h3>数据同步</h3>
+                <p style="margin-bottom: 10px; color: #666;">跨浏览器/设备同步数据</p>
+                <button id="btn-export" class="btn btn-primary">导出数据</button>
+                <input type="file" id="import-file-input" accept=".json" style="display: none;">
+                <button id="btn-import" class="btn btn-primary">导入数据</button>
+            </div>
+
             <!-- 库存列表 -->
             <div class="stock-list">
                 <h3>库存管理</h3>
@@ -619,6 +628,24 @@
                 // 刷新库存按钮
                 document.getElementById('btn-refresh').addEventListener('click', () => {
                     this.refreshInventory();
+                });
+
+                // 导出数据按钮
+                document.getElementById('btn-export').addEventListener('click', () => {
+                    this.exportData();
+                });
+
+                // 导入数据按钮
+                document.getElementById('btn-import').addEventListener('click', () => {
+                    document.getElementById('import-file-input').click();
+                });
+
+                // 文件导入事件
+                document.getElementById('import-file-input').addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.importData(e.target.files[0]);
+                        e.target.value = ''; // 清空文件输入
+                    }
                 });
             }
 
@@ -861,6 +888,56 @@
 
                 // 渲染操作日志
                 this.renderLogs();
+            }
+
+            // 导出数据
+            exportData() {
+                const inventory = this.storage.getAll();
+                const logs = this.storage.getLogs();
+                const data = {
+                    inventory: inventory,
+                    logs: logs,
+                    exportTime: new Date().toISOString()
+                };
+
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `inventory_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showNotification('数据导出成功');
+            }
+
+            // 导入数据
+            importData(file) {
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.inventory) {
+                            this.storage.save(data.inventory);
+                        }
+                        if (data.logs) {
+                            // 合并日志
+                            const existingLogs = this.storage.getLogs();
+                            const newLogs = data.logs.filter(log =>
+                                !existingLogs.some(existing => existing.timestamp === log.timestamp)
+                            );
+                            this.storage.logs = [...newLogs, ...existingLogs];
+                            localStorage.setItem('inventoryLogs', JSON.stringify(this.storage.logs));
+                        }
+                        showNotification('数据导入成功');
+                        this.renderAdminPanel();
+                    } catch (error) {
+                        showNotification('数据格式错误');
+                    }
+                };
+                reader.readAsText(file);
             }
 
             // 渲染日志
