@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>库存管理系统</title>
+    <style>
+
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        /* 容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 头部 */
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        /* 导航 */
+        nav {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        nav button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin-right: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        nav button:hover {
+            background: #5a6fd8;
+        }
+
+        nav button.active {
+            background: #764ba2;
+        }
+
+        /* 搜索区 */
+        .search-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* 搜索结果 */
+        .search-result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .search-result.show {
+            display: block;
+        }
+
+        .product-info {
+            margin-bottom: 15px;
+        }
+
+        .product-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .size-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .size-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+        }
+
+        .size-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .stock-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        /* 操作按钮 */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        /* 管理页面 */
+        .admin-section {
+            display: none;
+        }
+
+        .admin-section.show {
+            display: block;
+        }
+
+        .upload-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stock-list {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stock-item {
+            border: 1px solid #eee;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+
+        .stock-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            header h1 {
+                font-size: 20px;
+            }
+
+            .search-input {
+                font-size: 16px;
+                padding: 12px;
+            }
+
+            .size-grid {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+
+            nav button {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        /* 通知 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+        }
+
+        .notification.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .close {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close:hover {
+            color: #ddd;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(80vh - 140px);
+        }
+
+        .modal-footer {
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            text-align: right;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header>
+            <h1>库存管理系统</h1>
+            <p>快速查询 · 实时更新 · 多人协同</p>
+        </header>
+
+        <!-- 导航 -->
+        <nav>
+            <button id="btn-search" class="active">查询库存</button>
+            <button id="btn-admin">管理后台</button>
+            <button id="btn-logs">查看日志</button>
+            <button id="btn-refresh">刷新库存</button>
+        </nav>
+
+        <!-- 通知 -->
+        <div id="notification" class="notification"></div>
+
+        <!-- 日志弹窗 -->
+        <div id="logs-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>操作日志</h3>
+                    <span class="close" onclick="document.getElementById('logs-modal').style.display='none'">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 15px;">
+                        <input type="text" id="modal-log-search-input" class="search-input" placeholder="搜索日志（货号、用户、尺码）..." style="padding: 10px; font-size: 14px;">
+                    </div>
+                    <div id="modal-log-list-content"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="document.getElementById('logs-modal').style.display='none'">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 查询页面 -->
+        <div id="search-section" class="search-section show">
+            <input type="text" id="search-input" class="search-input" placeholder="请输入货号..." autocomplete="off">
+            <div id="loading" class="loading">
+                <span>搜索中...</span>
+            </div>
+        </div>
+
+        <!-- 搜索结果 -->
+        <div id="search-result" class="search-result">
+            <div id="result-content"></div>
+        </div>
+
+        <!-- 管理页面 -->
+        <div id="admin-section" class="admin-section">
+            <!-- 上传区域 -->
+            <div class="upload-section">
+                <h3>上传库存表</h3>
+                <input type="file" id="file-input" accept=".csv,.txt">
+                <p style="margin-top: 10px; color: #666;">支持CSV或文本文件，支持您的表格格式（商品+色号组合为货号）</p>
+                <button id="btn-save" class="btn btn-primary">保存库存</button>
+            </div>
+
+            <!-- 库存列表 -->
+            <div class="stock-list">
+                <h3>库存管理</h3>
+                <div id="stock-list-content"></div>
+            </div>
+
+            <!-- 操作日志 -->
+            <div class="stock-list" style="margin-top: 20px;">
+                <h3>操作日志</h3>
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="log-search-input" class="search-input" placeholder="搜索日志（货号、用户、尺码）..." style="padding: 10px; font-size: 14px;">
+                </div>
+                <div id="log-list-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 库存数据存储
+        class InventoryStorage {
+            constructor() {
+                this.data = JSON.parse(localStorage.getItem('inventoryData')) || {};
+                this.logs = JSON.parse(localStorage.getItem('inventoryLogs')) || [];
+            }
+
+            // 保存库存
+            save(data) {
+                this.data = data;
+                localStorage.setItem('inventoryData', JSON.stringify(data));
+            }
+
+            // 获取全部库存
+            getAll() {
+                return this.data;
+            }
+
+            // 根据货号搜索
+            search(productCode) {
+                productCode = productCode.trim().toLowerCase();
+                const results = {};
+
+                for (let code in this.data) {
+                    if (code.toLowerCase().includes(productCode)) {
+                        results[code] = this.data[code];
+                    }
+                }
+
+                return results;
+            }
+
+            // 更新库存
+            updateStock(productCode, size, quantity, operator = '未知用户') {
+                if (this.data[productCode]) {
+                    const oldQuantity = this.data[productCode][size];
+                    const change = quantity - oldQuantity;
+                    this.data[productCode][size] = quantity;
+                    localStorage.setItem('inventoryData', JSON.stringify(this.data));
+
+                    // 记录日志
+                    this.addLog({
+                        timestamp: new Date().toISOString(),
+                        operator: operator,
+                        productCode: productCode,
+                        size: size,
+                        oldQuantity: oldQuantity,
+                        newQuantity: quantity,
+                        change: change,
+                        type: change > 0 ? '增加' : '减少',
+                        action: '库存更新'
+                    });
+                }
+            }
+
+            // 删除产品
+            deleteProduct(productCode, operator = '未知用户') {
+                if (this.data[productCode]) {
+                    delete this.data[productCode];
+                    localStorage.setItem('inventoryData', JSON.stringify(this.data));
+
+                    // 记录日志
+                    this.addLog({
+                        timestamp: new Date().toISOString(),
+                        operator: operator,
+                        productCode: productCode,
+                        size: '',
+                        oldQuantity: 0,
+                        newQuantity: 0,
+                        change: 0,
+                        type: '删除',
+                        action: '删除产品'
+                    });
+                }
+            }
+
+            // 添加日志
+            addLog(log) {
+                this.logs.unshift(log);
+                // 最多保留1000条日志
+                if (this.logs.length > 1000) {
+                    this.logs = this.logs.slice(0, 1000);
+                }
+                localStorage.setItem('inventoryLogs', JSON.stringify(this.logs));
+            }
+
+            // 获取日志
+            getLogs() {
+                return this.logs;
+            }
+
+            // 搜索日志
+            searchLogs(keyword) {
+                keyword = keyword.toLowerCase();
+                return this.logs.filter(log =>
+                    log.productCode.toLowerCase().includes(keyword) ||
+                    log.operator.toLowerCase().includes(keyword) ||
+                    log.size.toLowerCase().includes(keyword)
+                );
+            }
+        }
+
+        // 通知功能
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // 页面控制器
+        class InventoryApp {
+            constructor() {
+                this.storage = new InventoryStorage();
+                this.init();
+            }
+
+            init() {
+                // 绑定事件
+                this.bindEvents();
+
+                // 加载页面
+                this.renderAdminPanel();
+            }
+
+            bindEvents() {
+                // 导航按钮
+                document.getElementById('btn-search').addEventListener('click', () => {
+                    this.showSearchPage();
+                });
+
+                document.getElementById('btn-admin').addEventListener('click', () => {
+                    this.showAdminPage();
+                });
+
+                // 搜索功能
+                document.getElementById('search-input').addEventListener('input', (e) => {
+                    this.handleSearch(e.target.value);
+                });
+
+                // 文件上传
+                document.getElementById('file-input').addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files[0]);
+                });
+
+                // 保存按钮
+                document.getElementById('btn-save').addEventListener('click', () => {
+                    if (confirm('确定要保存当前上传的库存数据吗？')) {
+                        this.saveInventory();
+                    }
+                });
+
+                // 日志搜索
+                document.getElementById('log-search-input').addEventListener('input', (e) => {
+                    this.handleLogSearch(e.target.value);
+                });
+
+                // 弹窗日志搜索
+                document.getElementById('modal-log-search-input').addEventListener('input', (e) => {
+                    this.handleModalLogSearch(e.target.value);
+                });
+
+                // 查看日志按钮
+                document.getElementById('btn-logs').addEventListener('click', () => {
+                    this.showLogsModal();
+                });
+
+                // 刷新库存按钮
+                document.getElementById('btn-refresh').addEventListener('click', () => {
+                    this.refreshInventory();
+                });
+            }
+
+            // 显示查询页面
+            showSearchPage() {
+                document.getElementById('btn-search').classList.add('active');
+                document.getElementById('btn-admin').classList.remove('active');
+                document.getElementById('search-section').classList.add('show');
+                document.getElementById('admin-section').classList.remove('show');
+            }
+
+            // 刷新库存
+            refreshInventory() {
+                showNotification('正在刷新库存数据...');
+
+                // 检查输入框中是否有货号
+                const searchInput = document.getElementById('search-input');
+                const keyword = searchInput.value.trim();
+
+                if (keyword) {
+                    // 如果有货号，重新搜索
+                    this.handleSearch(keyword);
+                } else {
+                    // 如果没有货号，清空搜索结果
+                    document.getElementById('search-result').classList.remove('show');
+                    showNotification('库存已刷新');
+                }
+            }
+
+            // 显示管理页面
+            showAdminPage() {
+                document.getElementById('btn-admin').classList.add('active');
+                document.getElementById('btn-search').classList.remove('active');
+                document.getElementById('admin-section').classList.add('show');
+                document.getElementById('search-section').classList.remove('show');
+                this.renderAdminPanel();
+            }
+
+            // 处理搜索
+            handleSearch(keyword) {
+                if (!keyword.trim()) {
+                    document.getElementById('search-result').classList.remove('show');
+                    return;
+                }
+
+                const loading = document.getElementById('loading');
+                loading.classList.add('show');
+
+                setTimeout(() => {
+                    // 使用存储类的搜索方法，支持模糊搜索
+                    const results = this.storage.search(keyword);
+                    this.renderSearchResults(results);
+                    loading.classList.remove('show');
+                }, 300);
+            }
+
+            // 渲染搜索结果
+            renderSearchResults(results) {
+                const resultContent = document.getElementById('result-content');
+                const searchResult = document.getElementById('search-result');
+
+                if (Object.keys(results).length === 0) {
+                    resultContent.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">未找到匹配的货号</p>';
+                    searchResult.classList.add('show');
+                    return;
+                }
+
+                let html = '';
+                for (let productCode in results) {
+                    const sizes = results[productCode];
+                    html += `
+                        <div class="product-info">
+                            <h3>货号: ${productCode}</h3>
+                            <div style="margin-bottom: 10px; color: #666; font-size: 14px;">
+                                所有尺码库存：${Object.keys(sizes).length} 个尺码
+                            </div>
+                            <div class="size-grid">
+                    `;
+
+                    for (let size in sizes) {
+                        html += `
+                            <div class="size-item">
+                                <div class="size-label">${size}</div>
+                                <div class="stock-number">${sizes[size]}</div>
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-danger" onclick="app.updateStock('${productCode}')">减库存</button>
+                                <button class="btn btn-primary" onclick="app.addStock('${productCode}')">加库存</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                resultContent.innerHTML = html;
+                searchResult.classList.add('show');
+            }
+
+            // 处理文件上传
+            handleFileUpload(file) {
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.parseFileContent(e.target.result);
+                };
+                reader.readAsText(file);
+            }
+
+            // 解析文件内容
+            parseFileContent(content) {
+                const lines = content.split('\n');
+                const inventory = {};
+
+                // 找到标题行（包含"商品"、"色号"、尺码等列）
+                let headerIndex = -1;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line.includes('商品') && line.includes('色号') && (line.includes('00') || line.includes('XS') || line.includes('S'))) {
+                        headerIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerIndex === -1) {
+                    showNotification('未找到有效的表头格式');
+                    return;
+                }
+
+                // 解析标题行，获取尺码列
+                const headerLine = lines[headerIndex];
+                const headers = headerLine.split(/[,，\t]/).map(h => h.trim());
+
+                const productCodeIndex = headers.findIndex(h => h.includes('商品'));
+                const colorCodeIndex = headers.findIndex(h => h.includes('色号'));
+
+                // 找到所有尺码列（包含00、XS、S、M、L、XL等）
+                const sizeColumns = [];
+                for (let i = 0; i < headers.length; i++) {
+                    const header = headers[i];
+                    if (['00', 'XS', 'S', 'M', 'L', 'XL', 'XXL'].includes(header) ||
+                        (header.length > 0 && !['品名', '商品', '色号', '总计'].includes(header))) {
+                        sizeColumns.push({
+                            index: i,
+                            size: header
+                        });
+                    }
+                }
+
+                // 解析数据行
+                for (let i = headerIndex + 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line || line.includes('总计')) continue;
+
+                    const parts = line.split(/[,，\t]/);
+                    if (parts.length <= productCodeIndex || parts.length <= colorCodeIndex) continue;
+
+                    const productCode = parts[productCodeIndex].trim();
+                    const colorCode = parts[colorCodeIndex].trim();
+
+                    // 组合货号：商品+色号（因为可能有相同商品不同色号）
+                    const fullProductCode = productCode && colorCode ? `${productCode}_${colorCode}` : productCode;
+
+                    if (!fullProductCode) continue;
+
+                    if (!inventory[fullProductCode]) {
+                        inventory[fullProductCode] = {};
+                    }
+
+                    // 解析每个尺码的库存
+                    for (let sizeCol of sizeColumns) {
+                        const stockStr = parts[sizeCol.index]?.trim();
+                        const stock = parseInt(stockStr) || 0;
+
+                        if (stock > 0) {
+                            inventory[fullProductCode][sizeCol.size] = stock;
+                        }
+                    }
+                }
+
+                this.tempInventory = inventory;
+                showNotification(`成功解析 ${Object.keys(inventory).length} 个产品`);
+            }
+
+            // 保存库存
+            saveInventory() {
+                if (this.tempInventory) {
+                    this.storage.save(this.tempInventory);
+                    showNotification('库存数据已保存');
+                    this.tempInventory = null;
+                    this.renderAdminPanel();
+                } else {
+                    showNotification('请先上传库存文件');
+                }
+            }
+
+            // 渲染管理面板
+            renderAdminPanel() {
+                const content = document.getElementById('stock-list-content');
+                // 确保获取最新的库存数据
+                const inventory = this.storage.getAll();
+
+                if (Object.keys(inventory).length === 0) {
+                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">暂无库存数据</p>';
+                } else {
+                    let html = '';
+                    for (let productCode in inventory) {
+                        const sizes = inventory[productCode];
+                        html += `
+                            <div class="stock-item">
+                                <h4>货号: ${productCode}</h4>
+                                <div class="size-grid">
+                        `;
+
+                        for (let size in sizes) {
+                            html += `
+                                <div class="size-item">
+                                    <div class="size-label">${size}</div>
+                                    <input type="number" value="${sizes[size]}"
+                                           onchange="app.updateStockBySize('${productCode}', '${size}', this.value)">
+                                </div>
+                            `;
+                        }
+
+                        html += `
+                                </div>
+                                <div class="action-buttons">
+                                    <button class="btn btn-danger" onclick="app.deleteProduct('${productCode}')">删除产品</button>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    content.innerHTML = html;
+                }
+
+                // 渲染操作日志
+                this.renderLogs();
+            }
+
+            // 渲染日志
+            renderLogs() {
+                const content = document.getElementById('log-list-content');
+                const logs = this.storage.getLogs();
+
+                if (logs.length === 0) {
+                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">暂无操作日志</p>';
+                    return;
+                }
+
+                const html = this.getLogsTableHTML(logs.slice(0, 50));
+                content.innerHTML = html;
+            }
+
+            // 显示日志弹窗
+            showLogsModal() {
+                const modal = document.getElementById('logs-modal');
+                modal.style.display = 'block';
+                this.renderModalLogs();
+            }
+
+            // 渲染弹窗日志
+            renderModalLogs() {
+                const content = document.getElementById('modal-log-list-content');
+                const logs = this.storage.getLogs();
+
+                if (logs.length === 0) {
+                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">暂无操作日志</p>';
+                    return;
+                }
+
+                let html = this.getLogsTableHTML(logs.slice(0, 50));
+                content.innerHTML = html;
+            }
+
+            // 弹窗日志搜索
+            handleModalLogSearch(keyword) {
+                const logs = keyword.trim() ? this.storage.searchLogs(keyword) : this.storage.getLogs();
+                const content = document.getElementById('modal-log-list-content');
+
+                if (logs.length === 0) {
+                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">未找到匹配的日志</p>';
+                    return;
+                }
+
+                let html = this.getLogsTableHTML(logs.slice(0, 50));
+                content.innerHTML = html;
+            }
+
+            // 生成日志表格HTML
+            getLogsTableHTML(logs) {
+                let html = `
+                    <style>
+                        .log-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-top: 10px;
+                        }
+                        .log-table th, .log-table td {
+                            border: 1px solid #ddd;
+                            padding: 10px;
+                            text-align: left;
+                            font-size: 14px;
+                        }
+                        .log-table th {
+                            background-color: #f8f9fa;
+                            font-weight: bold;
+                            color: #333;
+                        }
+                        .log-table tr:nth-child(even) {
+                            background-color: #f8f9fa;
+                        }
+                        .log-table tr:hover {
+                            background-color: #e9ecef;
+                        }
+                        .log-type {
+                            padding: 2px 6px;
+                            border-radius: 3px;
+                            color: white;
+                            font-size: 12px;
+                        }
+                        .log-type.增加 {
+                            background-color: #28a745;
+                        }
+                        .log-type.减少 {
+                            background-color: #dc3545;
+                        }
+                        .log-type.删除 {
+                            background-color: #ffc107;
+                            color: #000;
+                        }
+                        .log-timestamp {
+                            color: #666;
+                            font-size: 12px;
+                        }
+                    </style>
+                    <table class="log-table">
+                        <tr>
+                            <th>时间</th>
+                            <th>操作人</th>
+                            <th>货号</th>
+                            <th>尺码</th>
+                            <th>操作类型</th>
+                            <th>原库存</th>
+                            <th>新库存</th>
+                            <th>变更数量</th>
+                        </tr>
+                `;
+
+                for (let log of logs) {
+                    const date = new Date(log.timestamp);
+                    const timeStr = date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                    html += `
+                        <tr>
+                            <td class="log-timestamp">${timeStr}</td>
+                            <td>${log.operator}</td>
+                            <td>${log.productCode}</td>
+                            <td>${log.size || '-'}</td>
+                            <td><span class="log-type ${log.type}">${log.type}</span></td>
+                            <td>${log.oldQuantity}</td>
+                            <td>${log.newQuantity}</td>
+                            <td style="font-weight: bold; color: ${log.change > 0 ? '#28a745' : log.change < 0 ? '#dc3545' : '#666'}">
+                                ${log.change > 0 ? '+' + log.change : log.change}
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                html += '</table>';
+
+                if (logs.length > 50) {
+                    html += `<p style="text-align: center; margin-top: 10px; color: #666;">只显示最近50条日志，共 ${logs.length} 条</p>`;
+                }
+
+                return html;
+            }
+
+            // 搜索日志
+            handleLogSearch(keyword) {
+                const logs = keyword.trim() ? this.storage.searchLogs(keyword) : this.storage.getLogs();
+                const content = document.getElementById('log-list-content');
+
+                if (logs.length === 0) {
+                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">未找到匹配的日志</p>';
+                    return;
+                }
+
+                let html = `
+                    <style>
+                        .log-table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-top: 10px;
+                        }
+                        .log-table th, .log-table td {
+                            border: 1px solid #ddd;
+                            padding: 10px;
+                            text-align: left;
+                            font-size: 14px;
+                        }
+                        .log-table th {
+                            background-color: #f8f9fa;
+                            font-weight: bold;
+                            color: #333;
+                        }
+                        .log-table tr:nth-child(even) {
+                            background-color: #f8f9fa;
+                        }
+                        .log-table tr:hover {
+                            background-color: #e9ecef;
+                        }
+                        .log-type {
+                            padding: 2px 6px;
+                            border-radius: 3px;
+                            color: white;
+                            font-size: 12px;
+                        }
+                        .log-type.增加 {
+                            background-color: #28a745;
+                        }
+                        .log-type.减少 {
+                            background-color: #dc3545;
+                        }
+                        .log-type.删除 {
+                            background-color: #ffc107;
+                            color: #000;
+                        }
+                        .log-timestamp {
+                            color: #666;
+                            font-size: 12px;
+                        }
+                    </style>
+                    <table class="log-table">
+                        <tr>
+                            <th>时间</th>
+                            <th>操作人</th>
+                            <th>货号</th>
+                            <th>尺码</th>
+                            <th>操作类型</th>
+                            <th>原库存</th>
+                            <th>新库存</th>
+                            <th>变更数量</th>
+                        </tr>
+                `;
+
+                for (let log of logs.slice(0, 50)) {
+                    const date = new Date(log.timestamp);
+                    const timeStr = date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                    html += `
+                        <tr>
+                            <td class="log-timestamp">${timeStr}</td>
+                            <td>${log.operator}</td>
+                            <td>${log.productCode}</td>
+                            <td>${log.size || '-'}</td>
+                            <td><span class="log-type ${log.type}">${log.type}</span></td>
+                            <td>${log.oldQuantity}</td>
+                            <td>${log.newQuantity}</td>
+                            <td style="font-weight: bold; color: ${log.change > 0 ? '#28a745' : log.change < 0 ? '#dc3545' : '#666'}">
+                                ${log.change > 0 ? '+' + log.change : log.change}
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                html += '</table>';
+
+                if (logs.length > 50) {
+                    html += `<p style="text-align: center; margin-top: 10px; color: #666;">只显示最近50条日志，共 ${logs.length} 条</p>`;
+                }
+
+                content.innerHTML = html;
+            }
+
+            // 更新库存
+            updateStock(productCode) {
+                const operator = prompt('请输入操作人名称:', '');
+                if (!operator) {
+                    showNotification('请输入操作人名称');
+                    return;
+                }
+
+                const sizes = this.storage.getAll()[productCode];
+                const availableSizes = Object.keys(sizes);
+                const selectedSize = prompt(`请选择尺码: ${availableSizes.join(', ')}`, '');
+
+                if (!selectedSize) {
+                    showNotification('请输入尺码');
+                    return;
+                }
+
+                // 不区分大小写检查尺码是否存在
+                const normalizedSize = selectedSize.trim().toUpperCase();
+                const validSize = availableSizes.find(size => size.toUpperCase() === normalizedSize);
+
+                if (!validSize) {
+                    showNotification(`无效的尺码: ${selectedSize}，请输入有效的尺码`);
+                    return;
+                }
+
+                const quantity = prompt('请输入减少的数量:', '1');
+                if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+                    showNotification('请输入有效的减少数量');
+                    return;
+                }
+
+                const newStock = Math.max(0, sizes[validSize] - parseInt(quantity));
+                this.storage.updateStock(productCode, validSize, newStock, operator);
+                showNotification('库存已更新');
+                this.renderAdminPanel();
+                if (document.getElementById('btn-search').classList.contains('active')) {
+                    this.handleSearch(document.getElementById('search-input').value);
+                }
+            }
+
+            // 增加库存
+            addStock(productCode) {
+                const operator = prompt('请输入操作人名称:', '');
+                if (!operator) {
+                    showNotification('请输入操作人名称');
+                    return;
+                }
+
+                const sizes = this.storage.getAll()[productCode];
+                const availableSizes = Object.keys(sizes);
+                const selectedSize = prompt(`请选择尺码: ${availableSizes.join(', ')}`, '');
+
+                if (!selectedSize) {
+                    showNotification('请输入尺码');
+                    return;
+                }
+
+                // 不区分大小写检查尺码是否存在
+                const normalizedSize = selectedSize.trim().toUpperCase();
+                const validSize = availableSizes.find(size => size.toUpperCase() === normalizedSize);
+
+                if (!validSize) {
+                    showNotification(`无效的尺码: ${selectedSize}，请输入有效的尺码`);
+                    return;
+                }
+
+                const quantity = prompt('请输入增加的数量:', '1');
+                if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+                    showNotification('请输入有效的增加数量');
+                    return;
+                }
+
+                const newStock = sizes[validSize] + parseInt(quantity);
+                this.storage.updateStock(productCode, validSize, newStock, operator);
+                showNotification('库存已更新');
+                this.renderAdminPanel();
+                if (document.getElementById('btn-search').classList.contains('active')) {
+                    this.handleSearch(document.getElementById('search-input').value);
+                }
+            }
+
+            // 按尺码更新库存
+            updateStockBySize(productCode, size, quantity) {
+                const operator = prompt('请输入操作人名称:', '');
+                if (!operator) {
+                    showNotification('请输入操作人名称');
+                    return;
+                }
+
+                const newStock = parseInt(quantity) || 0;
+                this.storage.updateStock(productCode, size, newStock, operator);
+                showNotification('库存已更新');
+            }
+
+            // 删除产品
+            deleteProduct(productCode) {
+                const operator = prompt('请输入操作人名称:', '');
+                if (!operator) {
+                    showNotification('请输入操作人名称');
+                    return;
+                }
+
+                if (confirm(`确定要删除货号 ${productCode} 的所有数据吗？`)) {
+                    this.storage.deleteProduct(productCode, operator);
+                    showNotification('产品已删除');
+                    this.renderAdminPanel();
+                }
+            }
+        }
+
+        // 初始化应用
+        let app;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new InventoryApp();
+        });
+
+        // 点击弹窗外部关闭弹窗
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('logs-modal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
