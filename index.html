@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>库存管理系统</title>
+    <title>库存管理系统 (Supabase)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
 
         /* 全局样式 */
@@ -249,8 +250,6 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #28a745;
-            color: white;
             padding: 15px 20px;
             border-radius: 5px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
@@ -261,6 +260,16 @@
         .notification.show {
             display: block;
             animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: #28a745;
+            color: white;
+        }
+
+        .notification.error {
+            background: #dc3545;
+            color: white;
         }
 
         @keyframes slideIn {
@@ -274,89 +283,44 @@
             }
         }
 
-        /* 弹窗样式 */
-        .modal {
+        /* Loading overlay */
+        .loading-overlay {
             display: none;
             position: fixed;
-            z-index: 1000;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal.show {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 5% auto;
-            padding: 0;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 800px;
-            max-height: 80vh;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
             align-items: center;
         }
 
-        .modal-header h3 {
-            margin: 0;
-            font-size: 18px;
+        .loading-overlay.show {
+            display: flex;
         }
 
-        .close {
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.3s;
+        .loading-spinner {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
         }
 
-        .close:hover {
-            color: #ddd;
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
         }
 
-        .modal-body {
-            padding: 20px;
-            overflow-y: auto;
-            max-height: calc(80vh - 140px);
-        }
-
-        .modal-footer {
-            background-color: #f8f9fa;
-            padding: 15px 20px;
-            text-align: right;
-            border-top: 1px solid #eee;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -364,7 +328,7 @@
     <div class="container">
         <!-- 头部 -->
         <header>
-            <h1>库存管理系统</h1>
+            <h1>库存管理系统 (Supabase)</h1>
             <p>快速查询 · 实时更新 · 多人协同</p>
         </header>
 
@@ -386,22 +350,11 @@
         <!-- 通知 -->
         <div id="notification" class="notification"></div>
 
-        <!-- 日志弹窗 -->
-        <div id="logs-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>操作日志</h3>
-                    <span class="close" onclick="document.getElementById('logs-modal').style.display='none'">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div style="margin-bottom: 15px;">
-                        <input type="text" id="modal-log-search-input" class="search-input" placeholder="搜索日志（货号、用户、尺码）..." style="padding: 10px; font-size: 14px;">
-                    </div>
-                    <div id="modal-log-list-content"></div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" onclick="document.getElementById('logs-modal').style.display='none'">关闭</button>
-                </div>
+        <!-- Loading overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <div>加载中...</div>
             </div>
         </div>
 
@@ -428,140 +381,305 @@
                 <button id="btn-save" class="btn btn-primary">保存库存</button>
             </div>
 
-            <!-- 数据同步 -->
-            <div class="upload-section">
-                <h3>数据同步</h3>
-                <p style="margin-bottom: 10px; color: #666;">跨浏览器/设备同步数据</p>
-                <button id="btn-export" class="btn btn-primary">导出数据</button>
-                <input type="file" id="import-file-input" accept=".json" style="display: none;">
-                <button id="btn-import" class="btn btn-primary">导入数据</button>
-            </div>
-
             <!-- 库存列表 -->
             <div class="stock-list">
                 <h3>库存管理</h3>
                 <div id="stock-list-content"></div>
             </div>
-
-            <!-- 操作日志 -->
-            <div class="stock-list" style="margin-top: 20px;">
-                <h3>操作日志</h3>
-                <div style="margin-bottom: 15px;">
-                    <input type="text" id="log-search-input" class="search-input" placeholder="搜索日志（货号、用户、尺码）..." style="padding: 10px; font-size: 14px;">
-                </div>
-                <div id="log-list-content"></div>
-            </div>
         </div>
     </div>
 
     <script>
-        // 库存数据存储
+        // Initialize Supabase client
+        const SUPABASE_URL = 'https://qucasetifjhdfalpxjpy.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_qeH-q3osPW2FQeyEuKW_qw_qPBNMGUx';
+
+        let supabaseClient;
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (error) {
+            console.error('Failed to initialize Supabase:', error);
+            showNotification('数据库连接失败，请检查配置', 'error');
+        }
+
+        // 库存数据存储 - Supabase版本（宽表格式）
         class InventoryStorage {
             constructor() {
-                this.data = JSON.parse(localStorage.getItem('inventoryData')) || {};
-                this.logs = JSON.parse(localStorage.getItem('inventoryLogs')) || [];
+                this.supabase = supabaseClient;
             }
 
-            // 保存库存
-            save(data) {
-                this.data = data;
-                localStorage.setItem('inventoryData', JSON.stringify(data));
-            }
+            // 保存库存（批量 upsert）- 转换为宽表格式
+            async save(data, productNames = {}) {
+                try {
+                    showLoadingOverlay(true);
 
-            // 获取全部库存
-            getAll() {
-                return this.data;
-            }
+                    // 转换数据格式：从嵌套格式到宽表格式
+                    // data 格式: {productCode: {size: quantity}}
+                    // productNames 格式: {productCode: productName}
+                    // 宽表格式: {品名, 商品, 色号, 0, XS, S, M, L, XL}
 
-            // 根据货号搜索
-            search(productCode) {
-                productCode = productCode.trim().toLowerCase();
-                const results = {};
+                    const rowsMap = new Map(); // 使用 Map 按 (商品, 色号) 分组
 
-                for (let code in this.data) {
-                    if (code.toLowerCase().includes(productCode)) {
-                        results[code] = this.data[code];
+                    for (let fullCode in data) {
+                        // 分离 product_code 和 color_code
+                        const parts = fullCode.split('_');
+                        const productCode = parts[0];
+                        const colorCode = parts.length > 1 ? parts[1] : '';
+
+                        const key = `${productCode}_${colorCode}`;
+
+                        if (!rowsMap.has(key)) {
+                            rowsMap.set(key, {
+                                品名: productNames[fullCode] || '未知',
+                                商品: productCode,
+                                色号: parseInt(colorCode) || 0,
+                                '0': 0,
+                                'XS': 0,
+                                'S': 0,
+                                'M': 0,
+                                'L': 0,
+                                'XL': 0
+                            });
+                        }
+
+                        const row = rowsMap.get(key);
+
+                        // 将每个尺码的库存填入对应列
+                        for (let size in data[fullCode]) {
+                            const quantity = parseInt(data[fullCode][size]) || 0;
+
+                            // 映射尺码：00 -> 列 "0"，其他尺码直接对应
+                            if (size === '00') {
+                                row['0'] = quantity;
+                            } else if (['XS', 'S', 'M', 'L', 'XL'].includes(size)) {
+                                row[size] = quantity;
+                            }
+                        }
                     }
-                }
 
-                return results;
-            }
+                    // 转换 Map 为数组
+                    const records = Array.from(rowsMap.values());
 
-            // 更新库存
-            updateStock(productCode, size, quantity, operator = '未知用户') {
-                if (this.data[productCode]) {
-                    const oldQuantity = this.data[productCode][size];
-                    const change = quantity - oldQuantity;
-                    this.data[productCode][size] = quantity;
-                    localStorage.setItem('inventoryData', JSON.stringify(this.data));
+                    if (records.length === 0) {
+                        showLoadingOverlay(false);
+                        showNotification('没有有效的库存数据', 'error');
+                        return false;
+                    }
 
-                    // 记录日志
-                    this.addLog({
-                        timestamp: new Date().toISOString(),
-                        operator: operator,
-                        productCode: productCode,
-                        size: size,
-                        oldQuantity: oldQuantity,
-                        newQuantity: quantity,
-                        change: change,
-                        type: change > 0 ? '增加' : '减少',
-                        action: '库存更新'
-                    });
-                }
-            }
+                    // 批量插入或更新 - 使用 (商品, 色号) 作为唯一键
+                    const { data: result, error } = await this.supabase
+                        .from('Inventory')
+                        .upsert(records, {
+                            onConflict: '商品,色号',
+                            ignoreDuplicates: false
+                        });
 
-            // 删除产品
-            deleteProduct(productCode, operator = '未知用户') {
-                if (this.data[productCode]) {
-                    delete this.data[productCode];
-                    localStorage.setItem('inventoryData', JSON.stringify(this.data));
+                    if (error) throw error;
 
-                    // 记录日志
-                    this.addLog({
-                        timestamp: new Date().toISOString(),
-                        operator: operator,
-                        productCode: productCode,
-                        size: '',
-                        oldQuantity: 0,
-                        newQuantity: 0,
-                        change: 0,
-                        type: '删除',
-                        action: '删除产品'
-                    });
+                    showLoadingOverlay(false);
+                    return true;
+                } catch (error) {
+                    showLoadingOverlay(false);
+                    console.error('Error saving inventory:', error);
+                    showNotification('保存库存失败: ' + error.message, 'error');
+                    return false;
                 }
             }
 
-            // 添加日志
-            addLog(log) {
-                this.logs.unshift(log);
-                // 最多保留1000条日志
-                if (this.logs.length > 1000) {
-                    this.logs = this.logs.slice(0, 1000);
+            // 获取全部库存 - 从宽表转换为嵌套格式
+            async getAll() {
+                try {
+                    const { data, error } = await this.supabase
+                        .from('Inventory')
+                        .select('品名, 商品, 色号, "0", XS, S, M, L, XL')
+                        .order('商品', { ascending: true })
+                        .order('色号', { ascending: true });
+
+                    if (error) throw error;
+
+                    // 转换为嵌套格式 {productCode: {size: quantity}}
+                    const inventory = {};
+                    for (let row of data) {
+                        const fullCode = `${row['商品']}_${row['色号']}`;
+
+                        if (!inventory[fullCode]) {
+                            inventory[fullCode] = {};
+                        }
+
+                        // 映射列回尺码：列 "0" -> 尺码 "00"
+                        if (row['0'] && parseInt(row['0']) > 0) {
+                            inventory[fullCode]['00'] = parseInt(row['0']);
+                        }
+                        if (row['XS'] && parseInt(row['XS']) > 0) {
+                            inventory[fullCode]['XS'] = parseInt(row['XS']);
+                        }
+                        if (row['S'] && parseInt(row['S']) > 0) {
+                            inventory[fullCode]['S'] = parseInt(row['S']);
+                        }
+                        if (row['M'] && parseInt(row['M']) > 0) {
+                            inventory[fullCode]['M'] = parseInt(row['M']);
+                        }
+                        if (row['L'] && parseInt(row['L']) > 0) {
+                            inventory[fullCode]['L'] = parseInt(row['L']);
+                        }
+                        if (row['XL'] && parseInt(row['XL']) > 0) {
+                            inventory[fullCode]['XL'] = parseInt(row['XL']);
+                        }
+                    }
+
+                    return inventory;
+                } catch (error) {
+                    console.error('Error getting inventory:', error);
+                    showNotification('获取库存失败: ' + error.message, 'error');
+                    return {};
                 }
-                localStorage.setItem('inventoryLogs', JSON.stringify(this.logs));
             }
 
-            // 获取日志
-            getLogs() {
-                return this.logs;
+            // 根据货号搜索 - 使用 .or() 搜索商品和色号
+            async search(productCode) {
+                try {
+                    productCode = productCode.trim();
+
+                    // 检查输入是否为纯数字（可能是色号）
+                    const isNumeric = /^\d+$/.test(productCode);
+
+                    let query = this.supabase
+                        .from('Inventory')
+                        .select('品名, 商品, 色号, "0", XS, S, M, L, XL');
+
+                    // 如果是纯数字，同时搜索商品编号和色号（精确+模糊）
+                    if (isNumeric) {
+                        const numValue = parseInt(productCode);
+                        query = query.or(`商品.ilike.%${productCode}%,色号.eq.${numValue}`);
+                    } else {
+                        // 如果不是纯数字，只搜索商品编号
+                        query = query.ilike('商品', `%${productCode}%`);
+                    }
+
+                    const { data, error } = await query;
+
+                    if (error) throw error;
+
+                    // 转换为嵌套格式
+                    const results = {};
+                    for (let row of data) {
+                        const fullCode = `${row['商品']}_${row['色号']}`;
+
+                        if (!results[fullCode]) {
+                            results[fullCode] = {};
+                        }
+
+                        // 映射列回尺码
+                        if (row['0'] && parseInt(row['0']) > 0) {
+                            results[fullCode]['00'] = parseInt(row['0']);
+                        }
+                        if (row['XS'] && parseInt(row['XS']) > 0) {
+                            results[fullCode]['XS'] = parseInt(row['XS']);
+                        }
+                        if (row['S'] && parseInt(row['S']) > 0) {
+                            results[fullCode]['S'] = parseInt(row['S']);
+                        }
+                        if (row['M'] && parseInt(row['M']) > 0) {
+                            results[fullCode]['M'] = parseInt(row['M']);
+                        }
+                        if (row['L'] && parseInt(row['L']) > 0) {
+                            results[fullCode]['L'] = parseInt(row['L']);
+                        }
+                        if (row['XL'] && parseInt(row['XL']) > 0) {
+                            results[fullCode]['XL'] = parseInt(row['XL']);
+                        }
+                    }
+
+                    return results;
+                } catch (error) {
+                    console.error('Error searching inventory:', error);
+                    showNotification('搜索失败: ' + error.message, 'error');
+                    return {};
+                }
             }
 
-            // 搜索日志
-            searchLogs(keyword) {
-                keyword = keyword.toLowerCase();
-                return this.logs.filter(log =>
-                    log.productCode.toLowerCase().includes(keyword) ||
-                    log.operator.toLowerCase().includes(keyword) ||
-                    log.size.toLowerCase().includes(keyword)
-                );
+            // 更新库存 - 动态更新对应的尺码列
+            async updateStock(productCode, size, quantity, operator = '未知用户') {
+                try {
+                    showLoadingOverlay(true);
+
+                    // 分离 product_code 和 color_code
+                    const parts = productCode.split('_');
+                    const prodCode = parts[0];
+                    const colorCode = parts.length > 1 ? parseInt(parts[1]) : 0;
+
+                    // 映射尺码：00 -> 列 "0"，其他尺码直接对应
+                    let columnName;
+                    if (size === '00') {
+                        columnName = '0';
+                    } else {
+                        columnName = size;
+                    }
+
+                    // 更新对应列的库存
+                    const { error: updateError } = await this.supabase
+                        .from('Inventory')
+                        .update({ [columnName]: quantity })
+                        .eq('商品', prodCode)
+                        .eq('色号', colorCode);
+
+                    if (updateError) throw updateError;
+
+                    showLoadingOverlay(false);
+                    return true;
+                } catch (error) {
+                    showLoadingOverlay(false);
+                    console.error('Error updating stock:', error);
+                    showNotification('更新库存失败: ' + error.message, 'error');
+                    return false;
+                }
+            }
+
+            // 删除产品 - 按商品和色号删除
+            async deleteProduct(productCode, operator = '未知用户') {
+                try {
+                    showLoadingOverlay(true);
+
+                    // 分离 product_code 和 color_code
+                    const parts = productCode.split('_');
+                    const prodCode = parts[0];
+                    const colorCode = parts.length > 1 ? parseInt(parts[1]) : 0;
+
+                    // 删除产品
+                    const { error } = await this.supabase
+                        .from('Inventory')
+                        .delete()
+                        .eq('商品', prodCode)
+                        .eq('色号', colorCode);
+
+                    if (error) throw error;
+
+                    showLoadingOverlay(false);
+                    return true;
+                } catch (error) {
+                    showLoadingOverlay(false);
+                    console.error('Error deleting product:', error);
+                    showNotification('删除产品失败: ' + error.message, 'error');
+                    return false;
+                }
+            }
+        }
+
+        // 显示/隐藏加载遮罩层
+        function showLoadingOverlay(show) {
+            const overlay = document.getElementById('loading-overlay');
+            if (show) {
+                overlay.classList.add('show');
+            } else {
+                overlay.classList.remove('show');
             }
         }
 
         // 通知功能
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             const notification = document.getElementById('notification');
             notification.textContent = message;
-            notification.classList.add('show');
+            notification.className = 'notification show ' + type;
 
             setTimeout(() => {
                 notification.classList.remove('show');
@@ -604,48 +722,20 @@
                 });
 
                 // 保存按钮
-                document.getElementById('btn-save').addEventListener('click', () => {
+                document.getElementById('btn-save').addEventListener('click', async () => {
                     if (confirm('确定要保存当前上传的库存数据吗？')) {
-                        this.saveInventory();
+                        await this.saveInventory();
                     }
-                });
-
-                // 日志搜索
-                document.getElementById('log-search-input').addEventListener('input', (e) => {
-                    this.handleLogSearch(e.target.value);
-                });
-
-                // 弹窗日志搜索
-                document.getElementById('modal-log-search-input').addEventListener('input', (e) => {
-                    this.handleModalLogSearch(e.target.value);
                 });
 
                 // 查看日志按钮
                 document.getElementById('btn-logs').addEventListener('click', () => {
-                    this.showLogsModal();
+                    showNotification('日志功能暂未启用', 'error');
                 });
 
                 // 刷新库存按钮
                 document.getElementById('btn-refresh').addEventListener('click', () => {
                     this.refreshInventory();
-                });
-
-                // 导出数据按钮
-                document.getElementById('btn-export').addEventListener('click', () => {
-                    this.exportData();
-                });
-
-                // 导入数据按钮
-                document.getElementById('btn-import').addEventListener('click', () => {
-                    document.getElementById('import-file-input').click();
-                });
-
-                // 文件导入事件
-                document.getElementById('import-file-input').addEventListener('change', (e) => {
-                    if (e.target.files.length > 0) {
-                        this.importData(e.target.files[0]);
-                        e.target.value = ''; // 清空文件输入
-                    }
                 });
             }
 
@@ -658,7 +748,7 @@
             }
 
             // 刷新库存
-            refreshInventory() {
+            async refreshInventory() {
                 showNotification('正在刷新库存数据...');
 
                 // 检查输入框中是否有货号
@@ -667,7 +757,7 @@
 
                 if (keyword) {
                     // 如果有货号，重新搜索
-                    this.handleSearch(keyword);
+                    await this.handleSearch(keyword);
                 } else {
                     // 如果没有货号，清空搜索结果
                     document.getElementById('search-result').classList.remove('show');
@@ -685,7 +775,7 @@
             }
 
             // 处理搜索
-            handleSearch(keyword) {
+            async handleSearch(keyword) {
                 if (!keyword.trim()) {
                     document.getElementById('search-result').classList.remove('show');
                     return;
@@ -694,12 +784,16 @@
                 const loading = document.getElementById('loading');
                 loading.classList.add('show');
 
-                setTimeout(() => {
+                try {
                     // 使用存储类的搜索方法，支持模糊搜索
-                    const results = this.storage.search(keyword);
+                    const results = await this.storage.search(keyword);
                     this.renderSearchResults(results);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    showNotification('搜索失败', 'error');
+                } finally {
                     loading.classList.remove('show');
-                }, 300);
+                }
             }
 
             // 渲染搜索结果
@@ -763,6 +857,7 @@
             parseFileContent(content) {
                 const lines = content.split('\n');
                 const inventory = {};
+                const productNames = {}; // 存储品名
 
                 // 找到标题行（包含"商品"、"色号"、尺码等列）
                 let headerIndex = -1;
@@ -775,7 +870,7 @@
                 }
 
                 if (headerIndex === -1) {
-                    showNotification('未找到有效的表头格式');
+                    showNotification('未找到有效的表头格式', 'error');
                     return;
                 }
 
@@ -783,6 +878,7 @@
                 const headerLine = lines[headerIndex];
                 const headers = headerLine.split(/[,，\t]/).map(h => h.trim());
 
+                const productNameIndex = headers.findIndex(h => h.includes('品名'));
                 const productCodeIndex = headers.findIndex(h => h.includes('商品'));
                 const colorCodeIndex = headers.findIndex(h => h.includes('色号'));
 
@@ -807,6 +903,7 @@
                     const parts = line.split(/[,，\t]/);
                     if (parts.length <= productCodeIndex || parts.length <= colorCodeIndex) continue;
 
+                    const productName = productNameIndex >= 0 ? parts[productNameIndex]?.trim() : '未知';
                     const productCode = parts[productCodeIndex].trim();
                     const colorCode = parts[colorCodeIndex].trim();
 
@@ -819,7 +916,10 @@
                         inventory[fullProductCode] = {};
                     }
 
-                    // 解析每个尺码的库存
+                    // 保存品名
+                    productNames[fullProductCode] = productName || '未知';
+
+                    // 解析每个尺码的库存 - 保持尺码 "00" 在内存中
                     for (let sizeCol of sizeColumns) {
                         const stockStr = parts[sizeCol.index]?.trim();
                         const stock = parseInt(stockStr) || 0;
@@ -831,471 +931,207 @@
                 }
 
                 this.tempInventory = inventory;
+                this.tempProductNames = productNames; // 保存品名数据
                 showNotification(`成功解析 ${Object.keys(inventory).length} 个产品`);
             }
 
             // 保存库存
-            saveInventory() {
+            async saveInventory() {
                 if (this.tempInventory) {
-                    this.storage.save(this.tempInventory);
-                    showNotification('库存数据已保存');
-                    this.tempInventory = null;
-                    this.renderAdminPanel();
+                    const success = await this.storage.save(this.tempInventory, this.tempProductNames || {});
+                    if (success) {
+                        showNotification('库存数据已保存');
+                        this.tempInventory = null;
+                        this.tempProductNames = null;
+                        await this.renderAdminPanel();
+                    }
                 } else {
-                    showNotification('请先上传库存文件');
+                    showNotification('请先上传库存文件', 'error');
                 }
             }
 
             // 渲染管理面板
-            renderAdminPanel() {
+            async renderAdminPanel() {
                 const content = document.getElementById('stock-list-content');
-                // 确保获取最新的库存数据
-                const inventory = this.storage.getAll();
 
-                if (Object.keys(inventory).length === 0) {
-                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">暂无库存数据</p>';
-                } else {
-                    let html = '';
-                    for (let productCode in inventory) {
-                        const sizes = inventory[productCode];
-                        html += `
-                            <div class="stock-item">
-                                <h4>货号: ${productCode}</h4>
-                                <div class="size-grid">
-                        `;
+                try {
+                    showLoadingOverlay(true);
 
-                        for (let size in sizes) {
+                    // 确保获取最新的库存数据
+                    const inventory = await this.storage.getAll();
+
+                    if (Object.keys(inventory).length === 0) {
+                        content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">暂无库存数据</p>';
+                    } else {
+                        let html = '';
+                        for (let productCode in inventory) {
+                            const sizes = inventory[productCode];
                             html += `
-                                <div class="size-item">
-                                    <div class="size-label">${size}</div>
-                                    <input type="number" value="${sizes[size]}"
-                                           onchange="app.updateStockBySize('${productCode}', '${size}', this.value)">
+                                <div class="stock-item">
+                                    <h4>货号: ${productCode}</h4>
+                                    <div class="size-grid">
+                            `;
+
+                            for (let size in sizes) {
+                                html += `
+                                    <div class="size-item">
+                                        <div class="size-label">${size}</div>
+                                        <input type="number" value="${sizes[size]}"
+                                               onchange="app.updateStockBySize('${productCode}', '${size}', this.value)">
+                                    </div>
+                                `;
+                            }
+
+                            html += `
+                                    </div>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-danger" onclick="app.deleteProduct('${productCode}')">删除产品</button>
+                                    </div>
                                 </div>
                             `;
                         }
 
-                        html += `
-                                </div>
-                                <div class="action-buttons">
-                                    <button class="btn btn-danger" onclick="app.deleteProduct('${productCode}')">删除产品</button>
-                                </div>
-                            </div>
-                        `;
+                        content.innerHTML = html;
                     }
-
-                    content.innerHTML = html;
+                } catch (error) {
+                    console.error('Error rendering admin panel:', error);
+                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #dc3545;">加载失败，请刷新重试</p>';
+                } finally {
+                    showLoadingOverlay(false);
                 }
-
-                // 渲染操作日志
-                this.renderLogs();
-            }
-
-            // 导出数据
-            exportData() {
-                const inventory = this.storage.getAll();
-                const logs = this.storage.getLogs();
-                const data = {
-                    inventory: inventory,
-                    logs: logs,
-                    exportTime: new Date().toISOString()
-                };
-
-                const jsonString = JSON.stringify(data, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `inventory_backup_${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-                showNotification('数据导出成功');
-            }
-
-            // 导入数据
-            importData(file) {
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = JSON.parse(e.target.result);
-                        if (data.inventory) {
-                            this.storage.save(data.inventory);
-                        }
-                        if (data.logs) {
-                            // 合并日志
-                            const existingLogs = this.storage.getLogs();
-                            const newLogs = data.logs.filter(log =>
-                                !existingLogs.some(existing => existing.timestamp === log.timestamp)
-                            );
-                            this.storage.logs = [...newLogs, ...existingLogs];
-                            localStorage.setItem('inventoryLogs', JSON.stringify(this.storage.logs));
-                        }
-                        showNotification('数据导入成功');
-                        this.renderAdminPanel();
-                    } catch (error) {
-                        showNotification('数据格式错误');
-                    }
-                };
-                reader.readAsText(file);
-            }
-
-            // 渲染日志
-            renderLogs() {
-                const content = document.getElementById('log-list-content');
-                const logs = this.storage.getLogs();
-
-                if (logs.length === 0) {
-                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">暂无操作日志</p>';
-                    return;
-                }
-
-                const html = this.getLogsTableHTML(logs.slice(0, 50));
-                content.innerHTML = html;
-            }
-
-            // 显示日志弹窗
-            showLogsModal() {
-                const modal = document.getElementById('logs-modal');
-                modal.style.display = 'block';
-                this.renderModalLogs();
-            }
-
-            // 渲染弹窗日志
-            renderModalLogs() {
-                const content = document.getElementById('modal-log-list-content');
-                const logs = this.storage.getLogs();
-
-                if (logs.length === 0) {
-                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">暂无操作日志</p>';
-                    return;
-                }
-
-                let html = this.getLogsTableHTML(logs.slice(0, 50));
-                content.innerHTML = html;
-            }
-
-            // 弹窗日志搜索
-            handleModalLogSearch(keyword) {
-                const logs = keyword.trim() ? this.storage.searchLogs(keyword) : this.storage.getLogs();
-                const content = document.getElementById('modal-log-list-content');
-
-                if (logs.length === 0) {
-                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">未找到匹配的日志</p>';
-                    return;
-                }
-
-                let html = this.getLogsTableHTML(logs.slice(0, 50));
-                content.innerHTML = html;
-            }
-
-            // 生成日志表格HTML
-            getLogsTableHTML(logs) {
-                let html = `
-                    <style>
-                        .log-table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin-top: 10px;
-                        }
-                        .log-table th, .log-table td {
-                            border: 1px solid #ddd;
-                            padding: 10px;
-                            text-align: left;
-                            font-size: 14px;
-                        }
-                        .log-table th {
-                            background-color: #f8f9fa;
-                            font-weight: bold;
-                            color: #333;
-                        }
-                        .log-table tr:nth-child(even) {
-                            background-color: #f8f9fa;
-                        }
-                        .log-table tr:hover {
-                            background-color: #e9ecef;
-                        }
-                        .log-type {
-                            padding: 2px 6px;
-                            border-radius: 3px;
-                            color: white;
-                            font-size: 12px;
-                        }
-                        .log-type.增加 {
-                            background-color: #28a745;
-                        }
-                        .log-type.减少 {
-                            background-color: #dc3545;
-                        }
-                        .log-type.删除 {
-                            background-color: #ffc107;
-                            color: #000;
-                        }
-                        .log-timestamp {
-                            color: #666;
-                            font-size: 12px;
-                        }
-                    </style>
-                    <table class="log-table">
-                        <tr>
-                            <th>时间</th>
-                            <th>操作人</th>
-                            <th>货号</th>
-                            <th>尺码</th>
-                            <th>操作类型</th>
-                            <th>原库存</th>
-                            <th>新库存</th>
-                            <th>变更数量</th>
-                        </tr>
-                `;
-
-                for (let log of logs) {
-                    const date = new Date(log.timestamp);
-                    const timeStr = date.toLocaleString('zh-CN', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-
-                    html += `
-                        <tr>
-                            <td class="log-timestamp">${timeStr}</td>
-                            <td>${log.operator}</td>
-                            <td>${log.productCode}</td>
-                            <td>${log.size || '-'}</td>
-                            <td><span class="log-type ${log.type}">${log.type}</span></td>
-                            <td>${log.oldQuantity}</td>
-                            <td>${log.newQuantity}</td>
-                            <td style="font-weight: bold; color: ${log.change > 0 ? '#28a745' : log.change < 0 ? '#dc3545' : '#666'}">
-                                ${log.change > 0 ? '+' + log.change : log.change}
-                            </td>
-                        </tr>
-                    `;
-                }
-
-                html += '</table>';
-
-                if (logs.length > 50) {
-                    html += `<p style="text-align: center; margin-top: 10px; color: #666;">只显示最近50条日志，共 ${logs.length} 条</p>`;
-                }
-
-                return html;
-            }
-
-            // 搜索日志
-            handleLogSearch(keyword) {
-                const logs = keyword.trim() ? this.storage.searchLogs(keyword) : this.storage.getLogs();
-                const content = document.getElementById('log-list-content');
-
-                if (logs.length === 0) {
-                    content.innerHTML = '<p style="text-align: center; padding: 40px; color: #666;">未找到匹配的日志</p>';
-                    return;
-                }
-
-                let html = `
-                    <style>
-                        .log-table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin-top: 10px;
-                        }
-                        .log-table th, .log-table td {
-                            border: 1px solid #ddd;
-                            padding: 10px;
-                            text-align: left;
-                            font-size: 14px;
-                        }
-                        .log-table th {
-                            background-color: #f8f9fa;
-                            font-weight: bold;
-                            color: #333;
-                        }
-                        .log-table tr:nth-child(even) {
-                            background-color: #f8f9fa;
-                        }
-                        .log-table tr:hover {
-                            background-color: #e9ecef;
-                        }
-                        .log-type {
-                            padding: 2px 6px;
-                            border-radius: 3px;
-                            color: white;
-                            font-size: 12px;
-                        }
-                        .log-type.增加 {
-                            background-color: #28a745;
-                        }
-                        .log-type.减少 {
-                            background-color: #dc3545;
-                        }
-                        .log-type.删除 {
-                            background-color: #ffc107;
-                            color: #000;
-                        }
-                        .log-timestamp {
-                            color: #666;
-                            font-size: 12px;
-                        }
-                    </style>
-                    <table class="log-table">
-                        <tr>
-                            <th>时间</th>
-                            <th>操作人</th>
-                            <th>货号</th>
-                            <th>尺码</th>
-                            <th>操作类型</th>
-                            <th>原库存</th>
-                            <th>新库存</th>
-                            <th>变更数量</th>
-                        </tr>
-                `;
-
-                for (let log of logs.slice(0, 50)) {
-                    const date = new Date(log.timestamp);
-                    const timeStr = date.toLocaleString('zh-CN', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-
-                    html += `
-                        <tr>
-                            <td class="log-timestamp">${timeStr}</td>
-                            <td>${log.operator}</td>
-                            <td>${log.productCode}</td>
-                            <td>${log.size || '-'}</td>
-                            <td><span class="log-type ${log.type}">${log.type}</span></td>
-                            <td>${log.oldQuantity}</td>
-                            <td>${log.newQuantity}</td>
-                            <td style="font-weight: bold; color: ${log.change > 0 ? '#28a745' : log.change < 0 ? '#dc3545' : '#666'}">
-                                ${log.change > 0 ? '+' + log.change : log.change}
-                            </td>
-                        </tr>
-                    `;
-                }
-
-                html += '</table>';
-
-                if (logs.length > 50) {
-                    html += `<p style="text-align: center; margin-top: 10px; color: #666;">只显示最近50条日志，共 ${logs.length} 条</p>`;
-                }
-
-                content.innerHTML = html;
             }
 
             // 更新库存
-            updateStock(productCode) {
+            async updateStock(productCode) {
                 const operator = prompt('请输入操作人名称:', '');
                 if (!operator) {
-                    showNotification('请输入操作人名称');
+                    showNotification('请输入操作人名称', 'error');
                     return;
                 }
 
-                const sizes = this.storage.getAll()[productCode];
-                const availableSizes = Object.keys(sizes);
-                const selectedSize = prompt(`请选择尺码: ${availableSizes.join(', ')}`, '');
+                try {
+                    const inventory = await this.storage.getAll();
+                    const sizes = inventory[productCode];
+                    const availableSizes = Object.keys(sizes);
+                    const selectedSize = prompt(`请选择尺码: ${availableSizes.join(', ')}`, '');
 
-                if (!selectedSize) {
-                    showNotification('请输入尺码');
-                    return;
-                }
+                    if (!selectedSize) {
+                        showNotification('请输入尺码', 'error');
+                        return;
+                    }
 
-                // 不区分大小写检查尺码是否存在
-                const normalizedSize = selectedSize.trim().toUpperCase();
-                const validSize = availableSizes.find(size => size.toUpperCase() === normalizedSize);
+                    // 不区分大小写检查尺码是否存在
+                    const normalizedSize = selectedSize.trim().toUpperCase();
+                    const validSize = availableSizes.find(size => size.toUpperCase() === normalizedSize);
 
-                if (!validSize) {
-                    showNotification(`无效的尺码: ${selectedSize}，请输入有效的尺码`);
-                    return;
-                }
+                    if (!validSize) {
+                        showNotification(`无效的尺码: ${selectedSize}，请输入有效的尺码`, 'error');
+                        return;
+                    }
 
-                const quantity = prompt('请输入减少的数量:', '1');
-                if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
-                    showNotification('请输入有效的减少数量');
-                    return;
-                }
+                    const quantity = prompt('请输入减少的数量:', '1');
+                    if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+                        showNotification('请输入有效的减少数量', 'error');
+                        return;
+                    }
 
-                const newStock = Math.max(0, sizes[validSize] - parseInt(quantity));
-                this.storage.updateStock(productCode, validSize, newStock, operator);
-                showNotification('库存已更新');
-                this.renderAdminPanel();
-                if (document.getElementById('btn-search').classList.contains('active')) {
-                    this.handleSearch(document.getElementById('search-input').value);
+                    const newStock = Math.max(0, sizes[validSize] - parseInt(quantity));
+                    const success = await this.storage.updateStock(productCode, validSize, newStock, operator);
+
+                    if (success) {
+                        showNotification('库存已更新');
+                        await this.renderAdminPanel();
+                        if (document.getElementById('btn-search').classList.contains('active')) {
+                            await this.handleSearch(document.getElementById('search-input').value);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error updating stock:', error);
+                    showNotification('更新失败', 'error');
                 }
             }
 
             // 增加库存
-            addStock(productCode) {
+            async addStock(productCode) {
                 const operator = prompt('请输入操作人名称:', '');
                 if (!operator) {
-                    showNotification('请输入操作人名称');
+                    showNotification('请输入操作人名称', 'error');
                     return;
                 }
 
-                const sizes = this.storage.getAll()[productCode];
-                const availableSizes = Object.keys(sizes);
-                const selectedSize = prompt(`请选择尺码: ${availableSizes.join(', ')}`, '');
+                try {
+                    const inventory = await this.storage.getAll();
+                    const sizes = inventory[productCode];
+                    const availableSizes = Object.keys(sizes);
+                    const selectedSize = prompt(`请选择尺码: ${availableSizes.join(', ')}`, '');
 
-                if (!selectedSize) {
-                    showNotification('请输入尺码');
-                    return;
-                }
+                    if (!selectedSize) {
+                        showNotification('请输入尺码', 'error');
+                        return;
+                    }
 
-                // 不区分大小写检查尺码是否存在
-                const normalizedSize = selectedSize.trim().toUpperCase();
-                const validSize = availableSizes.find(size => size.toUpperCase() === normalizedSize);
+                    // 不区分大小写检查尺码是否存在
+                    const normalizedSize = selectedSize.trim().toUpperCase();
+                    const validSize = availableSizes.find(size => size.toUpperCase() === normalizedSize);
 
-                if (!validSize) {
-                    showNotification(`无效的尺码: ${selectedSize}，请输入有效的尺码`);
-                    return;
-                }
+                    if (!validSize) {
+                        showNotification(`无效的尺码: ${selectedSize}，请输入有效的尺码`, 'error');
+                        return;
+                    }
 
-                const quantity = prompt('请输入增加的数量:', '1');
-                if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
-                    showNotification('请输入有效的增加数量');
-                    return;
-                }
+                    const quantity = prompt('请输入增加的数量:', '1');
+                    if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) {
+                        showNotification('请输入有效的增加数量', 'error');
+                        return;
+                    }
 
-                const newStock = sizes[validSize] + parseInt(quantity);
-                this.storage.updateStock(productCode, validSize, newStock, operator);
-                showNotification('库存已更新');
-                this.renderAdminPanel();
-                if (document.getElementById('btn-search').classList.contains('active')) {
-                    this.handleSearch(document.getElementById('search-input').value);
+                    const newStock = sizes[validSize] + parseInt(quantity);
+                    const success = await this.storage.updateStock(productCode, validSize, newStock, operator);
+
+                    if (success) {
+                        showNotification('库存已更新');
+                        await this.renderAdminPanel();
+                        if (document.getElementById('btn-search').classList.contains('active')) {
+                            await this.handleSearch(document.getElementById('search-input').value);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error adding stock:', error);
+                    showNotification('更新失败', 'error');
                 }
             }
 
             // 按尺码更新库存
-            updateStockBySize(productCode, size, quantity) {
+            async updateStockBySize(productCode, size, quantity) {
                 const operator = prompt('请输入操作人名称:', '');
                 if (!operator) {
-                    showNotification('请输入操作人名称');
+                    showNotification('请输入操作人名称', 'error');
                     return;
                 }
 
                 const newStock = parseInt(quantity) || 0;
-                this.storage.updateStock(productCode, size, newStock, operator);
-                showNotification('库存已更新');
+                const success = await this.storage.updateStock(productCode, size, newStock, operator);
+
+                if (success) {
+                    showNotification('库存已更新');
+                }
             }
 
             // 删除产品
-            deleteProduct(productCode) {
+            async deleteProduct(productCode) {
                 const operator = prompt('请输入操作人名称:', '');
                 if (!operator) {
-                    showNotification('请输入操作人名称');
+                    showNotification('请输入操作人名称', 'error');
                     return;
                 }
 
                 if (confirm(`确定要删除货号 ${productCode} 的所有数据吗？`)) {
-                    this.storage.deleteProduct(productCode, operator);
-                    showNotification('产品已删除');
-                    this.renderAdminPanel();
+                    const success = await this.storage.deleteProduct(productCode, operator);
+
+                    if (success) {
+                        showNotification('产品已删除');
+                        await this.renderAdminPanel();
+                    }
                 }
             }
         }
@@ -1309,7 +1145,7 @@
         // 初始化应用
         let app;
         document.addEventListener('DOMContentLoaded', () => {
-            app = new InventoryApp();
+            app = window.app = new InventoryApp();
 
             // 检测并显示微信访问提示
             if (isWeChatBrowser()) {
@@ -1317,14 +1153,6 @@
                 if (tip) {
                     tip.style.display = 'block';
                 }
-            }
-        });
-
-        // 点击弹窗外部关闭弹窗
-        window.addEventListener('click', (event) => {
-            const modal = document.getElementById('logs-modal');
-            if (event.target == modal) {
-                modal.style.display = 'none';
             }
         });
     </script>
